@@ -32,6 +32,9 @@ void input_data::copy(const input_data *other, bool with_gamepad_data)
     last_mouse_movement = other->last_mouse_movement;
     last_wheel_event_time = other->last_wheel_event_time;
     last_wheel_event = other->last_wheel_event;
+    mouse_movement_x = other->mouse_movement_x;
+    mouse_movement_y = other->mouse_movement_y;
+    mouse_movement_is_relative = other->mouse_movement_is_relative;
     last_event_type.store(other->last_event_type);
 
     if (with_gamepad_data) {
@@ -46,8 +49,17 @@ void input_data::dispatch_uiohook_event(const uiohook_event *event)
         last_wheel_event = event->data.wheel;
         last_wheel_event_time = os_gettime_ns();
         last_event = event->time;
+    } else if (event->type == EVENT_MOUSE_MOVED_RELATIVE_TO_CURSOR) {
+        last_mouse_movement = event->data.mouse;
+        mouse_movement_x += event->data.mouse.x;
+        mouse_movement_y += event->data.mouse.y;
+        mouse_movement_is_relative = true;
+        last_event = event->time;
     } else if (event->type == EVENT_MOUSE_DRAGGED || event->type == EVENT_MOUSE_MOVED) {
         last_mouse_movement = event->data.mouse;
+        mouse_movement_x = event->data.mouse.x;
+        mouse_movement_y = event->data.mouse.y;
+        mouse_movement_is_relative = false;
         last_event = event->time;
     } else if (event->type == EVENT_KEY_PRESSED || event->type == EVENT_KEY_RELEASED) {
         keyboard[event->data.keyboard.keycode] = event->type == EVENT_KEY_PRESSED;

@@ -9,6 +9,9 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
     add_definitions(-DLINUX=1)
     set(client_PLATFORM_DEPS
             pthread)
+    set(client_PLATFORM_SOURCES
+            ../deps/common/evdev_input.cpp
+            ../deps/common/evdev_input.hpp)
 endif()
 
 if (WIN32 OR WIN64)
@@ -67,7 +70,8 @@ set(io_client_SOURCES
     src/gamepad_helper.cpp
     src/gamepad_helper.hpp
     src/uiohook_helper.cpp
-    src/uiohook_helper.hpp)
+    src/uiohook_helper.hpp
+    ${client_PLATFORM_SOURCES})
 
 add_executable(${PROJECT_NAME} ${io_client_SOURCES})
 

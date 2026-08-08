@@ -72,6 +72,8 @@ QString serialize_uiohook(const uiohook_event *e, const std::string &source_name
             return "mouse_moved";
         case EVENT_MOUSE_DRAGGED:
             return "mouse_dragged";
+        case EVENT_MOUSE_MOVED_RELATIVE_TO_CURSOR:
+            return "mouse_moved_relative";
         case EVENT_MOUSE_WHEEL:
             return "mouse_wheel";
         default:
@@ -100,6 +102,7 @@ QString serialize_uiohook(const uiohook_event *e, const std::string &source_name
     case EVENT_MOUSE_RELEASED:
     case EVENT_MOUSE_MOVED:
     case EVENT_MOUSE_DRAGGED:
+    case EVENT_MOUSE_MOVED_RELATIVE_TO_CURSOR:
         obj["event_source"] = utf8_to_qt(source_name.c_str());
         obj["event_type"] = QString(ev_to_str(e->type));
         obj["mask"] = e->mask;

@@ -53,6 +53,9 @@ struct input_data {
 
     /* used for the mouse motion event */
     mouse_event_data last_mouse_movement{};
+    int64_t mouse_movement_x{};
+    int64_t mouse_movement_y{};
+    bool mouse_movement_is_relative{};
 
     /* Gamepad data */
     gamepad_map<bool, SDL_GAMEPAD_BUTTON_COUNT> gamepad_buttons;

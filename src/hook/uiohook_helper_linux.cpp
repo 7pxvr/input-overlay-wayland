@@ -21,6 +21,7 @@
 #include <obs-module.h>
 #include <uiohook.h>
 #if defined(__linux__)
+#include <evdev_input.hpp>
 #include <obs/obs-nix-platform.h>
 #endif
 
@@ -32,13 +33,14 @@ namespace uiohook {
 */
 
 uint64_t last_scroll_time = 0; /* System time at last scroll event */
-bool state = false;
+std::atomic<bool> state{};
 std::mutex data_mutex;
 
 static pthread_t hook_thread;
 static pthread_mutex_t hook_running_mutex;
 static pthread_mutex_t hook_control_mutex;
 static pthread_cond_t hook_control_cond;
+static bool synchronization_initialized = false;
 
 void *hook_thread_proc(void *arg)
 {
@@ -85,6 +87,15 @@ void dispatch_proc(uiohook_event *event, void *)
         pthread_mutex_unlock(&hook_running_mutex);
     default:; /* Prevent missing case error */
     }
+    process_event(event);
+}
+
+void evdev_dispatch_proc(uiohook_event *event, void *)
+{
+    if (event->type == EVENT_HOOK_ENABLED)
+        state = true;
+    else if (event->type == EVENT_HOOK_DISABLED)
+        state = false;
     process_event(event);
 }
 
@@ -150,24 +161,46 @@ int hook_enable()
 
 void stop()
 {
+#if defined(__linux__)
+    if (evdev_input::is_running()) {
+        evdev_input::stop();
+        state = false;
+        return;
+    }
+#endif
+    if (!synchronization_initialized)
+        return;
+
     pthread_mutex_destroy(&hook_running_mutex);
     pthread_mutex_destroy(&hook_control_mutex);
     pthread_cond_destroy(&hook_control_cond);
+    synchronization_initialized = false;
+    state = false;
 }
 
 void start()
 {
 #if defined(__linux__)
-    // Check if we're running on wayland
+    // Wayland intentionally has no compositor-independent global key hook.
+    // Read the kernel evdev stream instead of trying the X11-only libuiohook backend.
     if (obs_get_nix_platform() != OBS_NIX_PLATFORM_X11_EGL) {
-        blog(LOG_WARNING,
-             "[input-overlay] Wayland is not supported by libuiohook. Keyboard an mouse hook will not work.\n");
+        const auto result = evdev_input::start(&evdev_dispatch_proc);
+        if (result) {
+            blog(LOG_INFO, "[input-overlay] Wayland evdev input hook started with %zu device(s).", result.device_count);
+        } else if (result.permission_denied != 0) {
+            blog(LOG_ERROR,
+                 "[input-overlay] Wayland input hook cannot read /dev/input/event*. Grant this user input-device "
+                 "read access (commonly membership in the 'input' group), then log out and back in.");
+        } else {
+            blog(LOG_ERROR, "[input-overlay] Wayland input hook found no supported evdev devices.");
+        }
         return;
     }
 #endif
     pthread_mutex_init(&hook_running_mutex, nullptr);
     pthread_mutex_init(&hook_control_mutex, nullptr);
     pthread_cond_init(&hook_control_cond, nullptr);
+    synchronization_initialized = true;
 
     /* Set the logger callback for library output. */
     hook_set_logger_proc(&logger_proc, nullptr);

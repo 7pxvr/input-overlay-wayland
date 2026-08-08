@@ -48,20 +48,20 @@ void element_mouse_movement::tick(float, sources::overlay_settings *settings)
     } else {
         get_mouse_offset(settings, m_pos, m_offset_pos, m_radius);
     }
-    m_last_x = settings->data.last_mouse_movement.x;
-    m_last_y = settings->data.last_mouse_movement.y;
+    m_last_x = settings->data.mouse_movement_x;
+    m_last_y = settings->data.mouse_movement_y;
 }
 
 float element_mouse_movement::get_mouse_angle(sources::overlay_settings *settings)
 {
     auto d_x = 0, d_y = 0;
 
-    if (settings->use_center) {
+    if (settings->use_center && !settings->data.mouse_movement_is_relative) {
         d_x = static_cast<int>(settings->data.last_mouse_movement.x - settings->monitor_h);
         d_y = static_cast<int>(settings->data.last_mouse_movement.y - settings->monitor_w);
     } else {
-        d_x = settings->data.last_mouse_movement.x - m_last_x;
-        d_y = settings->data.last_mouse_movement.y - m_last_y;
+        d_x = static_cast<int>(settings->data.mouse_movement_x - m_last_x);
+        d_y = static_cast<int>(settings->data.mouse_movement_y - m_last_y);
     }
 
     const float new_angle = static_cast<float>(0.5 * M_PI) + atan2f(static_cast<float>(d_y), static_cast<float>(d_x));
@@ -79,12 +79,12 @@ void element_mouse_movement::get_mouse_offset(sources::overlay_settings *setting
 {
     auto d_x = 0, d_y = 0;
 
-    if (settings->use_center) {
+    if (settings->use_center && !settings->data.mouse_movement_is_relative) {
         d_x = static_cast<int>(settings->data.last_mouse_movement.x - settings->monitor_h);
         d_y = static_cast<int>(settings->data.last_mouse_movement.y - settings->monitor_w);
     } else {
-        d_x = settings->data.last_mouse_movement.x - m_last_x;
-        d_y = settings->data.last_mouse_movement.y - m_last_y;
+        d_x = static_cast<int>(settings->data.mouse_movement_x - m_last_x);
+        d_y = static_cast<int>(settings->data.mouse_movement_y - m_last_y);
 
         if (abs(d_x) < settings->mouse_deadzone)
             d_x = 0;

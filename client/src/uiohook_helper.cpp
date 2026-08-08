@@ -21,6 +21,11 @@
 #include <cstdarg>
 #include <cstdio>
 #include <util.hpp>
+#if defined(__linux__)
+#include <cstdlib>
+#include <cstring>
+#include <evdev_input.hpp>
+#endif
 
 namespace uiohook_helper {
 std::atomic<bool> hook_state;
@@ -71,6 +76,7 @@ void dispatch_proc(uiohook_event *const event, void *)
         break;
     case EVENT_MOUSE_MOVED:
     case EVENT_MOUSE_DRAGGED:
+    case EVENT_MOUSE_MOVED_RELATIVE_TO_CURSOR:
         if (util::cfg.monitor_mouse) {
             std::lock_guard<std::mutex> lock(queue.mutex);
             queue.events.emplace_back(*event);
@@ -99,6 +105,31 @@ void print(unsigned int level, const char *format, ...)
 
 bool start()
 {
+#if defined(__linux__)
+    const char *session_type = std::getenv("XDG_SESSION_TYPE");
+    const bool wayland = (session_type && std::strcmp(session_type, "wayland") == 0) ||
+                         std::getenv("WAYLAND_DISPLAY") != nullptr;
+    if (wayland) {
+        const auto result = evdev_input::start(&dispatch_proc);
+        if (!result) {
+            if (result.permission_denied != 0) {
+                print(LOG_LEVEL_ERROR,
+                      "[evdev] Cannot read /dev/input/event*. Grant this user input-device read access "
+                      "(commonly membership in the 'input' group), then log out and back in.\n");
+            } else {
+                print(LOG_LEVEL_ERROR, "[evdev] No supported keyboard devices found.\n");
+            }
+            return false;
+        }
+
+        binfo("evdev started with %zu input device(s)", result.device_count);
+        hook_state = true;
+        while (hook_state && evdev_input::is_running())
+            util::sleep_ms(100);
+        return true;
+    }
+#endif
+
     hook_set_logger_proc(&print_proc, nullptr);
     hook_set_dispatch_proc(&dispatch_proc, nullptr);
 
@@ -158,6 +189,15 @@ void stop()
     if (!hook_state)
         return;
     hook_state = false;
+
+#if defined(__linux__)
+    if (evdev_input::is_running()) {
+        evdev_input::stop();
+        binfo("evdev stopped");
+        return;
+    }
+#endif
+
     const auto status = hook_stop();
 
     switch (status) {

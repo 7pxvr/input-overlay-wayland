@@ -38,6 +38,6 @@ private:
     mouse_movement m_movement_type;
     vec2 m_offset_pos = {};
     uint8_t m_radius = 0;
-    int m_last_x{}, m_last_y{};
+    int64_t m_last_x{}, m_last_y{};
     float m_angle{}, m_last_angle = 0.0f;
 };

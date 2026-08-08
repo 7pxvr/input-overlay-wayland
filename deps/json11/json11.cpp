@@ -20,6 +20,7 @@
  */
 
 #include <cassert>
+#include <cstdint>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>

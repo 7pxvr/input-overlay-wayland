@@ -29,7 +29,7 @@ namespace uiohook {
 */
 
 uint64_t last_scroll_time = 0; /* System time at last scroll event */
-bool state = false;
+std::atomic<bool> state{};
 std::mutex data_mutex;
 
 static HANDLE hook_thread;

@@ -21,6 +21,7 @@
 #include "../util/config.hpp"
 
 #include <input_data.hpp>
+#include <atomic>
 #include <mutex>
 #include <uiohook.h>
 #include <util/platform.h>
@@ -29,7 +30,7 @@
 
 namespace uiohook {
 extern uint64_t last_scroll_time;
-extern bool state;
+extern std::atomic<bool> state;
 
 inline void check_wheel()
 {
